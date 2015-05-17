@@ -50,13 +50,11 @@
 			<version>0.1-alpha</version>
 		</dependency>
 
-
 		<dependency>
 			<groupId>com.h2database</groupId>
 			<artifactId>h2</artifactId>
 			<version>1.4.182</version>
 			<scope>test</scope>
 		</dependency>
-
 	</dependencies>
 </project>

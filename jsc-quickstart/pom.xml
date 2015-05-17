@@ -8,6 +8,10 @@
 	<packaging>pom</packaging>
 
 	<name>JSC Quickstart</name>
+	
+	<properties>
+		<packages></packages>
+	</properties>
 
 	<build>
 		<resources>
@@ -96,7 +100,7 @@
 						</systemProperty>
 						<systemProperty>
 							<key>packages</key>
-							<value></value><!-- how can i figure this out? -->
+							<value>${packages}</value><!-- how can i figure this out? -->
 						</systemProperty>
 					</systemProperties>
 				</configuration>

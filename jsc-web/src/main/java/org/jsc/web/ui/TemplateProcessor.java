@@ -38,9 +38,8 @@ import org.jsoup.nodes.TextNode;
 
 
 /**
- * Creates 
+ * Creates component trees from html components
  * @author kzantow
- *
  */
 @Singleton
 public class TemplateProcessor {

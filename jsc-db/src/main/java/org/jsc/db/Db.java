@@ -566,7 +566,7 @@ public class Db {
 			insert(o);
 		}
 	}
-	
+
 	/**
 	 * delete object by id
 	 * @param o

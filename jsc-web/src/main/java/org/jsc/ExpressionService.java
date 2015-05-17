@@ -267,6 +267,9 @@ public class ExpressionService {
 			text.append(c);
 			last = c;
 		}
+		if(bracketDepth > 0) {
+			throw new IllegalArgumentException("Expression not balanced: " + expr);
+		}
 		addString.exec();
 		if (parts.size() == 1) {
 			return parts.get(0);

@@ -297,9 +297,27 @@ public class Util {
 	 * @return
 	 */
 	public static Throwable getCause(Throwable t) {
-//		if(t.getCause() != null && t.getCause() != t) {
-//			return t.getCause();
-//		}
+		if(t instanceof InvocationTargetException) {
+			return getCause(t.getCause());
+		}
+		if(t instanceof ServletException) {
+			Throwable cause = ((ServletException)t).getRootCause();
+			return cause == null ? t : cause;
+		}
+		return t;
+	}
+	
+	/**
+	 * Get the root cause of this throwable, as best we can; this
+	 * differs from getCause() that it will follow all causes, not just
+	 * seemingly pertinent ones.
+	 * @param t
+	 * @return
+	 */
+	public static Throwable getRootCause(Throwable t) {
+		if(t.getCause() != null && t.getCause() != t) {
+			return t.getCause();
+		}
 		if(t instanceof InvocationTargetException) {
 			return getCause(t.getCause());
 		}
