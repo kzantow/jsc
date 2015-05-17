@@ -1,0 +1,124 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>org.jsc</groupId>
+	<artifactId>jsc-quickstart</artifactId>
+	<version>0.1-alpha</version>
+	<packaging>pom</packaging>
+
+	<name>JSC Quickstart</name>
+
+	<build>
+		<resources>
+			<resource>
+				<directory>src/main/java</directory>
+				<excludes>
+					<exclude>**/*.java</exclude>
+				</excludes>
+			</resource>
+			<resource>
+				<directory>src/main/resources</directory>
+			</resource>
+		</resources>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<source>1.8</source>
+					<target>1.8</target>
+					<encoding>UTF-8</encoding>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-resources-plugin</artifactId>
+				<version>2.7</version>
+				<configuration>
+					<encoding>UTF-8</encoding>
+				</configuration>
+			</plugin>
+			<!-- assembly plugin -->
+			<!-- the assembly plugin is used to define your final deploy output (jar, 
+				zip, dir, war, etc..) -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<configuration>
+					<!-- The filename of the assembled distribution file default ${project.build.finalName} -->
+					<finalName>${project.build.finalName}</finalName>
+					<appendAssemblyId>false</appendAssemblyId>
+					<!-- A list of descriptor files path to generate from -->
+					<descriptors>
+						<descriptor>src/main/assembly/assembly.xml</descriptor>
+					</descriptors>
+				</configuration>
+				<executions>
+					<execution>
+						<id>assembly:single</id>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<version>1.4.0</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>java</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<mainClass>org.jsc.web.Server</mainClass>
+					<systemProperties>
+						<systemProperty>
+							<key>serverPort</key>
+							<value>8080</value>
+						</systemProperty>
+						<systemProperty>
+							<key>fsRootDir</key>
+							<value>~/.${project.build.finalName}/files</value>
+						</systemProperty>
+						<systemProperty>
+							<key>dbUrl</key>
+							<value>jdbc:h2:~/.${project.build.finalName}/db;MVCC=TRUE</value>
+						</systemProperty>
+						<systemProperty>
+							<key>development</key>
+							<value>true</value>
+						</systemProperty>
+						<systemProperty>
+							<key>packages</key>
+							<value></value><!-- how can i figure this out? -->
+						</systemProperty>
+					</systemProperties>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.jsc</groupId>
+			<artifactId>jsc-web</artifactId>
+			<version>0.1-alpha</version>
+		</dependency>
+		<dependency>
+			<groupId>org.jsc</groupId>
+			<artifactId>jsc-db</artifactId>
+			<version>0.1-alpha</version>
+		</dependency>
+		<dependency>
+			<groupId>org.jsc</groupId>
+			<artifactId>jsc-dav</artifactId>
+			<version>0.1-alpha</version>
+		</dependency>
+	</dependencies>
+</project>
