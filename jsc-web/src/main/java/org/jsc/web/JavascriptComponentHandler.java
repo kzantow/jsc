@@ -66,6 +66,8 @@ public class JavascriptComponentHandler extends JavaClassHandlers {
 	@Override
 	public RequestHandler getRequestHandler(String reqURI, HttpServletRequest req) {
 		String file = reqURI.substring(1).replace('.', '/');
+		//String[] parts = reqURI.split("\\Q/\\E");
+		//String file = parts[1]; // TODO nested
 		URL u = app.getResource(file + ".html");
 		if(u != null) {
 			URL js = app.getResource(file + ".js");
@@ -83,11 +85,15 @@ public class JavascriptComponentHandler extends JavaClassHandlers {
 								Component cmp = tpl.getComponent(file, u);
 								if("POST".equals(req.getMethod())) {
 									PostbackContext ctx = new PostbackContext(req, bindings);
+									ctx.put("request", req);
+									ctx.put("response", res);
 									try {
 										cmp.postback(ctx);
 										
 										// TODO won't always redirect... might download, etc..
-										res.sendRedirect(getFilterPath() + req.getRequestURI());
+										//res.sendRedirect(getFilterPath() + req.getRequestURI());
+										ctx.put("error", null); // FIXME remove this; need JS to be able to handle missing values like JSF EL does...
+										cmp.render(ctx, w);
 									} catch(Exception e) {
 										// In case of an error, re-render with error context
 										ctx.put("error", Util.getRootCause(e));
@@ -96,6 +102,8 @@ public class JavascriptComponentHandler extends JavaClassHandlers {
 								}
 								else {
 									Context ctx = new Context(bindings);
+									ctx.put("request", req);
+									ctx.put("response", res);
 									ctx.put("error", null); // FIXME remove this; need JS to be able to handle missing values like JSF EL does...
 									cmp.render(ctx, w);
 								}
