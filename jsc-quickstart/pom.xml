@@ -8,7 +8,7 @@
 	<packaging>pom</packaging>
 
 	<name>JSC Quickstart</name>
-	
+
 	<properties>
 		<packages></packages>
 	</properties>
@@ -42,31 +42,6 @@
 				<configuration>
 					<encoding>UTF-8</encoding>
 				</configuration>
-			</plugin>
-			<!-- assembly plugin -->
-			<!-- the assembly plugin is used to define your final deploy output (jar, 
-				zip, dir, war, etc..) -->
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-assembly-plugin</artifactId>
-				<configuration>
-					<!-- The filename of the assembled distribution file default ${project.build.finalName} -->
-					<finalName>${project.build.finalName}</finalName>
-					<appendAssemblyId>false</appendAssemblyId>
-					<!-- A list of descriptor files path to generate from -->
-					<descriptors>
-						<descriptor>src/main/assembly/assembly.xml</descriptor>
-					</descriptors>
-				</configuration>
-				<executions>
-					<execution>
-						<id>assembly:single</id>
-						<phase>package</phase>
-						<goals>
-							<goal>single</goal>
-						</goals>
-					</execution>
-				</executions>
 			</plugin>
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
@@ -106,6 +81,36 @@
 				</configuration>
 			</plugin>
 		</plugins>
+		
+		<pluginManagement>
+			<plugins>
+				<!-- assembly plugin -->
+				<!-- the assembly plugin is used to define your final deploy output (jar, 
+					zip, dir, war, etc..) -->
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-assembly-plugin</artifactId>
+					<configuration>
+						<!-- The filename of the assembled distribution file default ${project.build.finalName} -->
+						<finalName>${project.build.finalName}</finalName>
+						<appendAssemblyId>false</appendAssemblyId>
+						<!-- A list of descriptor files path to generate from -->
+						<descriptors>
+							<descriptor>src/main/assembly/assembly.xml</descriptor>
+						</descriptors>
+					</configuration>
+					<executions>
+						<execution>
+							<id>assembly:single</id>
+							<phase>package</phase>
+							<goals>
+								<goal>single</goal>
+							</goals>
+						</execution>
+					</executions>
+				</plugin>
+			</plugins>
+		</pluginManagement>
 	</build>
 
 	<dependencies>
