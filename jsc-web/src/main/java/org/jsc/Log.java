@@ -13,7 +13,6 @@ public class Log {
 	/**
 	 * Shared general log, available to the application
 	 */
-	public static final Log log = new Log(Log.class);
 	
 	public static enum Level {
 		DEBUG,

@@ -48,6 +48,8 @@ import com.google.inject.spi.TypeListener;
  * @author kzantow
  */
 public class App {
+	private static final Log log = new Log(App.class);
+	
 	/**
 	 * Whether to run the app in development mode
 	 */
@@ -55,7 +57,7 @@ public class App {
 	
 	static {
 		if(development) {
-			Log.log.info("  ----  Running in development mode...");
+			log.info("  ----  Running in development mode...");
 		}
 	}
 	
@@ -70,7 +72,7 @@ public class App {
 	private List<Proc> shutdownHooks = new ArrayList<Proc>();
 	
 	public App(String ... packages) {
-		Log.log.info("New app with packages: ", packages);
+		log.info("New app with packages: ", packages);
 		this.packages = Util.append(packages, "org.jsc");
 		init();
 	}
@@ -92,7 +94,7 @@ public class App {
 			}
 			Path dir = f.toPath();
 			watchingForChanges = new WatchDir(dir, true, p -> {
-				Log.log.debug(p, " changed, reloading app...");
+				log.debug(p, " changed, reloading app...");
 				//if(true) return; // todo real reloading
 				// Simulate the shutdown() call:
 				for(Method m : findAnnotatedMethods(OnShutdown.class)) {
@@ -373,7 +375,7 @@ public class App {
 				try {
 					//Thread.currentThread().setContextClassLoader(cl); // for reflections
 					for(Class<? extends Module> c : findSubtypesOf(Module.class)) {
-						Log.log.info("Found module: ", c);
+						log.info("Found module: ", c);
 						c.newInstance().configure(binder);
 					}
 				} catch(Exception e) {

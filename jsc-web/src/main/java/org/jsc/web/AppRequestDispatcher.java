@@ -21,6 +21,8 @@ import org.jsc.web.servlet.ServletPathRewriteRequestWrapper;
  */
 @Singleton
 public class AppRequestDispatcher {
+	@Inject Log log;
+	
 	/**
 	 * Implement this to handle a particular request... could be for JSON HTML or other
 	 */
@@ -119,7 +121,7 @@ public class AppRequestDispatcher {
 					}
 					t.printStackTrace();
 					AppFilter.sendError(res, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, t);
-					Log.log.error(t);
+					log.error(t);
 					return;
 				}
 			} else {
@@ -137,7 +139,7 @@ public class AppRequestDispatcher {
 			}
 		} finally {
 			if(App.development) {
-				Log.log.debug(req.getRemoteAddr(), " ", res.getStatus(), " ", req.getMethod(), " ", reqURI, " -- " , System.currentTimeMillis()-start, "ms");
+				log.debug(req.getRemoteAddr(), " ", res.getStatus(), " ", req.getMethod(), " ", reqURI, " -- " , System.currentTimeMillis()-start, "ms");
 			}
 		}
 	}
