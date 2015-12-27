@@ -57,6 +57,60 @@ public class JavascriptComponentHandler extends JavaClassHandlers {
 		bindings.put("console", new Console());
 	}
 	
+	public class JavascriptComponentRequestHandler implements RequestHandler {
+		private String reqURI;
+		private String file;
+		private URL u;
+		
+		public JavascriptComponentRequestHandler(String reqURI, String file, URL u) {
+			super();
+			this.reqURI = reqURI;
+			this.file = file;
+			this.u = u;
+		}
+
+		public String getFilterPath() {
+			return reqURI;
+		}
+
+		public void handle(HttpServletRequest req, HttpServletResponse res) throws Throwable {
+			if(u != null) {
+				res.setContentType(TEXT_HTML);
+				res.setCharacterEncoding(Util.UTF8);
+				Writer w = res.getWriter();
+				try {
+					Component cmp = tpl.getComponent(file, u);
+					if("POST".equals(req.getMethod())) {
+						PostbackContext ctx = new PostbackContext(req, bindings);
+						ctx.put("request", req);
+						ctx.put("response", res);
+						try {
+							cmp.postback(ctx);
+							
+							// TODO won't always redirect... might download, etc..
+							//res.sendRedirect(getFilterPath() + req.getRequestURI());
+							ctx.put("error", null); // FIXME remove this; need JS to be able to handle missing values like JSF EL does...
+							cmp.render(ctx, w);
+						} catch(Exception e) {
+							// In case of an error, re-render with error context
+							ctx.put("error", Util.getRootCause(e));
+							cmp.render(ctx, w);
+						}
+					}
+					else {
+						Context ctx = new Context(bindings);
+						ctx.put("request", req);
+						ctx.put("response", res);
+						ctx.put("error", null); // FIXME remove this; need JS to be able to handle missing values like JSF EL does...
+						cmp.render(ctx, w);
+					}
+				} catch(Exception e) {
+					renderErrorPage(e, w);
+				}
+			}			
+		}
+	}
+
 	public static class Console {
 		public void log(String s) {
 			System.out.println(s);
@@ -72,48 +126,7 @@ public class JavascriptComponentHandler extends JavaClassHandlers {
 		if(u != null) {
 			URL js = app.getResource(file + ".js");
 			if(js != null) {
-				RequestHandler handler = new RequestHandler() {
-					public String getFilterPath() {
-						return reqURI;
-					}
-					public void handle(HttpServletRequest req, HttpServletResponse res) throws Throwable {
-						if(u != null) {
-							res.setContentType(TEXT_HTML);
-							res.setCharacterEncoding(Util.UTF8);
-							Writer w = res.getWriter();
-							try {
-								Component cmp = tpl.getComponent(file, u);
-								if("POST".equals(req.getMethod())) {
-									PostbackContext ctx = new PostbackContext(req, bindings);
-									ctx.put("request", req);
-									ctx.put("response", res);
-									try {
-										cmp.postback(ctx);
-										
-										// TODO won't always redirect... might download, etc..
-										//res.sendRedirect(getFilterPath() + req.getRequestURI());
-										ctx.put("error", null); // FIXME remove this; need JS to be able to handle missing values like JSF EL does...
-										cmp.render(ctx, w);
-									} catch(Exception e) {
-										// In case of an error, re-render with error context
-										ctx.put("error", Util.getRootCause(e));
-										cmp.render(ctx, w);
-									}
-								}
-								else {
-									Context ctx = new Context(bindings);
-									ctx.put("request", req);
-									ctx.put("response", res);
-									ctx.put("error", null); // FIXME remove this; need JS to be able to handle missing values like JSF EL does...
-									cmp.render(ctx, w);
-								}
-							} catch(Exception e) {
-								renderErrorPage(e, w);
-							}
-						}			
-					}
-				};
-				
+				RequestHandler handler = new JavascriptComponentRequestHandler(reqURI, file, u);
 				return handler;
 			}
 		}

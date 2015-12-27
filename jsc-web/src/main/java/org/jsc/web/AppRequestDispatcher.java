@@ -119,7 +119,6 @@ public class AppRequestDispatcher {
 						AppFilter.sendError(res, HttpServletResponse.SC_UNAUTHORIZED, t);
 						return;
 					}
-					t.printStackTrace();
 					AppFilter.sendError(res, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, t);
 					log.error(t);
 					return;
