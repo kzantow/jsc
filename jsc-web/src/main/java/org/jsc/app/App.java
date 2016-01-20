@@ -5,6 +5,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Path;
@@ -371,7 +372,7 @@ public class App {
 	    	
 			injector = Guice.createInjector(
 			(binder) -> {
-				binder.bind(App.class).toInstance(this);
+				binder.bind(App.class).toInstance(App.this);
 				try {
 					//Thread.currentThread().setContextClassLoader(cl); // for reflections
 					for(Class<? extends Module> c : findSubtypesOf(Module.class)) {
@@ -442,7 +443,7 @@ public class App {
 				Class<?> clazz = typeLiteral.getRawType();
 				while (clazz != null) {
 					for (Field field : clazz.getDeclaredFields()) {
-						if (field.getType() == Log.class) {
+						if (field.getType() == Log.class && !Modifier.isStatic(field.getModifiers())) {
 							typeEncounter.register(new LogMembersInjector<T>(field));
 						}
 					}

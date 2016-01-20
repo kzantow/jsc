@@ -21,7 +21,7 @@ import org.jsc.web.servlet.ServletPathRewriteRequestWrapper;
  */
 @Singleton
 public class AppRequestDispatcher {
-	@Inject Log log;
+	Log log;
 	
 	/**
 	 * Implement this to handle a particular request... could be for JSON HTML or other

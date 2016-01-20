@@ -23,6 +23,10 @@ public class Log {
 	
 	static final boolean isDebugEnabled = App.development;
 	private final Logger logger;
+
+	public Log() {
+		logger = Logger.getLogger(Log.class.getName());
+	}
 	
 	public Log(Class<?> typ) {
 		logger = Logger.getLogger(typ.getName());
