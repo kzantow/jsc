@@ -83,6 +83,9 @@ public class AppRequestDispatcher {
 				}
 			}
 		}
+		if(indexHandler == null) { // mvn exec:java does not run the compile phase...
+			log.warn("No index handler found, this is probably not desired behavior. Make sure you've compiled your project!");
+		}
 	}
 
 	/**
