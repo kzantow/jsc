@@ -4,7 +4,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
@@ -12,8 +14,8 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.jsc.Log;
 import org.jsc.Util;
-import org.jsc.app.Service;
 import org.jsc.app.OnStartup;
+import org.jsc.app.Service;
 import org.jsc.io.Xml;
 import org.jsc.vfs.ContentResource;
 import org.jsc.vfs.ContentResourceLock;
@@ -25,7 +27,7 @@ import org.jsc.web.auth.HttpAuthenticator;
 import org.jsc.web.servlet.LoggingServletWrappers;
 
 /**
- * 
+ * Provides basic, fast WebDav services given a {@link ContentResourceProvider}, see: {@link org.jsc.vfs.FilesystemContentResourceProvider}
  * @author kzantow
  */
 @Service
@@ -35,7 +37,14 @@ public class WebDavHttpServletService implements RequestHandler {
 			return -1;
 		}
 	};
-
+	
+	/**
+	 * Need to use RFC_1123 with WebDav, per spec:
+	 * http://www.webdav.org/specs/rfc4918.html#PROPERTY_getlastmodified
+	 */
+	private static final DateTimeFormatter DAV_DATE_TIME_FORMAT = DateTimeFormatter.RFC_1123_DATE_TIME
+        .withLocale(Locale.US).withZone(ZoneOffset.UTC); // Need this for using Instant
+	
 	Log log;
 	@Inject ContentResourceProvider resources;
 	@Inject ContentResourceLockProvider resourcesLock;
@@ -272,9 +281,34 @@ public class WebDavHttpServletService implements RequestHandler {
 			appendPath(parent, w);
 			w.append('/');
 		}
-		//Util.urlEncode(r.getName(), w);
-		// URL encoding just doesn't work quite right...
-		w.append(r.getName().replace(" ", "%20").replace("<", "&lt;"));
+		streamEncoded(r.getName(), w);
+	}
+	
+	/**
+	 * Streams an XML-safe encoded stream
+	 */
+	public static void streamEncoded(CharSequence chars, Writer w) throws IOException {
+		// URL encoding just doesn't work quite right for windows, for some reason...
+		int sz = chars.length();
+		for(int i = 0; i < sz; i++) {
+			char c = chars.charAt(i);
+			switch(c) {
+			case ' ':
+				w.append("%20");
+				break;
+			case '<':
+				w.append("%3C");
+				break;
+			case '>':
+				w.append("%3E");
+				break;
+			case '&':
+				w.append("%26");
+				break;
+			default:
+				w.append(chars.charAt(i));
+			}
+		}
 	}
 	
 	void proplist(ContentResource r, int depth, String urlPrefix, Writer w) throws IOException {
@@ -291,14 +325,14 @@ public class WebDavHttpServletService implements RequestHandler {
 		w.append("<D:prop>");
 		
 		w.append("<D:creationdate>");
-		DateTimeFormatter.ISO_INSTANT.formatTo(r.getCreationTime(), w);
+		DAV_DATE_TIME_FORMAT.formatTo(r.getCreationTime(), w);
 		w.append("</D:creationdate>");
 		
 		w.append("<D:displayname>");
 		if("".equals(r.getName())) {
 			w.append("Your Awesome Repository");
 		} else {
-			w.append(r.getName());
+			streamEncoded(r.getName(), w);
 		}
 		w.append("</D:displayname>");
 		
@@ -326,11 +360,11 @@ public class WebDavHttpServletService implements RequestHandler {
 		}
 		
 		w.append("<D:getlastmodified>");
-		DateTimeFormatter.ISO_INSTANT.formatTo(r.getLastModified(), w);
+		DAV_DATE_TIME_FORMAT.formatTo(r.getLastModified(), w);
 		w.append("</D:getlastmodified>");
 		
 		w.append("<D:getetag>");
-		DateTimeFormatter.ISO_INSTANT.formatTo(r.getLastModified(), w);
+		w.append(Long.toHexString(r.getLastModified().getEpochSecond()));
 		w.append("</D:getetag>");
 		
         w.append(
