@@ -124,6 +124,16 @@ public class Util {
 	 * @param out
 	 */
 	public static void streamFully(InputStream in, OutputStream out) {
+		streamFully(in, out, true);
+	}
+	
+	/**
+	 * Stream the contents of input to the output stream using a small buffer;
+	 * closes input stream, optionally closes the output stream
+	 * @param in
+	 * @param out
+	 */
+	public static void streamFully(InputStream in, OutputStream out, boolean closeOutput) {
 		try {
 			byte[] buffer = new byte[8192];
 			int read = 0;
@@ -134,7 +144,9 @@ public class Util {
 			throw asRuntime(e);
 		} finally {
 			try { in.close(); } catch(Exception e) { ignore(e); }
-			try { out.close(); } catch(Exception e) { ignore(e); }
+			if(closeOutput) {
+				try { out.close(); } catch(Exception e) { ignore(e); }
+			}
 		}
 	}
 
@@ -1266,5 +1278,61 @@ public class Util {
 		t.printStackTrace(pw);
 		pw.flush();
 		return w.toString();
+	}
+
+	/**
+	 * Bounds an input stream based on a start and end position
+	 * @param in 
+	 * @param start byte index (0-based) to start with, inclusive
+	 * @param end final byte index (0-based), inclusive
+	 * @return a new InputStream, returning only a portion from the original
+	 */
+	public static InputStream inputStreamRange(InputStream in, final long start, final long end) {
+		if(start <= 0 && end < 0) {
+			return in;
+		}
+		return new InputStream() {
+			int read = 0;
+			@Override
+			public int read() throws IOException {
+				while(read < start) {
+					in.read();
+					read++;
+				}
+				if(end < 0 || read < end) {
+					try {
+						int r = in.read();
+						read++;
+						return r;
+					} catch(IOException e) {
+						throw e;
+					}
+				}
+				return -1;
+			}
+			@Override
+			public int read(byte[] b, int off, int len) throws IOException {
+				if(b.length < len) {
+					throw new IllegalArgumentException("Byte array too small to read: " + len);
+				}
+				while(read < start) {
+					read += in.read(b, 0, (int)(start - read > len ? len : (start - read) ));
+				}
+				if(end < 0 || read < end)  {
+					int r = in.read(b, 0, (int)( (end < 0 || end - read > len) ? len : (end - read) ));
+					read += r;
+					return r;
+				}
+				return -1;
+			}
+			@Override
+			public int read(byte[] b) throws IOException {
+				return this.read(b, 0, b.length);
+			}
+			@Override
+			public void close() throws IOException {
+				in.close();
+			}
+		};
 	}
 }

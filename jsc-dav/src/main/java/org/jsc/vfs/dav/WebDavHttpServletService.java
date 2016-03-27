@@ -2,8 +2,10 @@ package org.jsc.vfs.dav;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
@@ -101,7 +103,7 @@ public class WebDavHttpServletService implements RequestHandler {
 	public void handle(HttpServletRequest req, HttpServletResponse res) throws Throwable {
 		if(Util.debug) {
 			req = new LoggingServletWrappers.HttpRequestWrapper(req, new OutputStreamWriter(System.out));
-			res = new LoggingServletWrappers.HttpResponseWrapper(res, req, req.getRequestURI(), new OutputStreamWriter(System.out));
+			res = new LoggingServletWrappers.HttpResponseWrapper(res, req, req.getMethod() + " " + req.getRequestURI(), new OutputStreamWriter(System.out));
 		}
 		
 		String method = req.getMethod();
@@ -117,7 +119,8 @@ public class WebDavHttpServletService implements RequestHandler {
 		// authentication
 		String user = "system";//auth.authenticate(req, res);
 		
-		Writer w = new OutputStreamWriter(res.getOutputStream(), Util.UTF8C);
+		OutputStream out = res.getOutputStream();
+		Writer w = new OutputStreamWriter(out, Util.UTF8C);
 		
 		try {
 			String[] path = getpath(req.getRequestURI());
@@ -137,24 +140,109 @@ public class WebDavHttpServletService implements RequestHandler {
 					return;
 				}
 				
-				res.setHeader("Content-Disposition", "attachment; filename=\"" + Util.urlEncode(c.getName()) + "\"");
+				Instant ifUnmodSince = getOrIgnoreDate(req.getHeader("If-Unmodified-Since"));
+				Instant ifModSince = getOrIgnoreDate(req.getHeader("If-Modified-Since"));
+				
+				
+				// TODO when to include this?
+//				res.setHeader("Content-Disposition", "attachment; filename=\"" + Util.urlEncode(c.getName()) + "\"");
 				if(c.getContentType() != null) {
 					res.setContentType(c.getContentType());
 				}
+				
 				if(!c.isContainer()) {
+					res.setDateHeader("Last-Modified", c.getLastModified().toEpochMilli());
+					
+					boolean acceptRanges = false;
+					
+					if(acceptRanges) {
+						res.setHeader("Accept-Ranges", "bytes"); // indicate we accept range requests
+					}
+					else {
+						res.setHeader("Accept-Ranges", "none"); // indicate we do not accept range requests
+					}
+					
 					int length = (int)c.getContentLength();
 					if(length == 0) {
 						res.setStatus(204); // No content
 					}
 					else {
-						res.setContentLength(length);
-						res.setDateHeader("Last-Modified", c.getLastModified().toEpochMilli());
 						if("GET".equals(method)) {
-							try {
-								Util.streamFully(c.getInputStream(), res.getOutputStream());
-							} catch(Exception e) {
-								log.warn("Transfer of: ", path, " failed: ", e);
+							// Support partial transfer via. range requests
+							// https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.35.1
+							
+							String range = req.getHeader("Range");
+							if(acceptRanges && range != null) {
+								Instant ifRange = getOrIgnoreDate(req.getHeader("If-Range"));
+								
+								if(range.startsWith("bytes=") && range.indexOf(",") < 0) { // only support bytes, don't support multiple ranges yet
+									res.setStatus(HttpServletResponse.SC_PARTIAL_CONTENT); // 206 Partial content
+									
+									range = range.substring("bytes=".length());
+									
+									long size = 0;
+									InputStream[] rangeStreams = null;
+									while(!Util.isEmpty(range)) {
+										long startRange = 0;
+										long endRange = -1;
+										int dash = range.indexOf("-");
+										int comma = range.indexOf(","); // multiple ranges may be requested
+										startRange = Long.parseLong(range.substring(0,dash));
+										dash++;
+										if(dash < range.length()) {
+											endRange = Long.parseLong(comma > 0 ? range.substring(dash, comma) : range.substring(dash));
+										}
+										if(comma > 0) {
+											range = range.substring(comma+1);
+										} else {
+											range = null; // no more ranges
+										}
+										
+										// add 1 to end, it's inclusive
+										size += endRange >= 0 ? (endRange - startRange) : (length - 1 - startRange);
+										
+										// multiple ranges need to be sent with a multipart response; don't support that yet
+										res.setHeader("Content-Range", "bytes " + startRange + "-" + (startRange + size) + "/" + length);
+										
+										if(rangeStreams == null) {
+											if(Util.debug) {
+												log.info("Stream will send: " + Util.readFully(Util.inputStreamRange(c.getInputStream(), startRange, endRange)).length + " bytes");
+											}
+											rangeStreams = new InputStream[] { Util.inputStreamRange(c.getInputStream(), startRange, endRange) };
+										}
+										else {
+											rangeStreams = Util.append(rangeStreams, Util.inputStreamRange(c.getInputStream(), startRange, endRange) );
+										}
+									}
+									
+									res.setContentLength((int)size);
+									for(InputStream rangeStream : rangeStreams) {
+										Util.streamFully(rangeStream, out, false);
+									}
+									return;
+								}
+								else {
+									res.sendError(416); // requested range not satisfiable
+								}
 							}
+							else {
+								try {
+									res.setContentLength(length);
+									// https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.15
+									// TODO stream MD5 hash operation
+									res.setHeader("Content-MD5",  Util.hex(Util.md5(Util.readFully(c.getInputStream()))));
+									// send the contents
+									Util.streamFully(c.getInputStream(), res.getOutputStream());
+								} catch(Exception e) {
+									log.warn("Transfer of: ", path, " failed: ", e);
+								}
+							}
+						}
+						else { // HEAD request
+							res.setContentLength(length);
+							// https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.15
+							res.setHeader("Content-MD5",  Util.hex(Util.md5(Util.readFully(c.getInputStream()))));
+							
 						}
 					}
 				}
@@ -246,6 +334,9 @@ public class WebDavHttpServletService implements RequestHandler {
 				res.setContentType("text/xml");
 				res.setCharacterEncoding("utf-8");
 				
+//				res.setHeader("Accept-Ranges", "none");
+//				res.setHeader("Accept-Ranges", "bytes");
+				
 				if(!c.isContainer()) {
 					res.setDateHeader("Last-Modified", c.getLastModified().toEpochMilli());
 				}
@@ -267,7 +358,22 @@ public class WebDavHttpServletService implements RequestHandler {
 				w.append("</D:multistatus>");
 			}
 		} finally {
-			w.close();
+			w.flush();
+			Util.close(out);
+		}
+	}
+
+	/**
+	 * Gets a date from the given string or null if the format is invalid
+	 */
+	private Instant getOrIgnoreDate(String date) {
+		if(Util.isEmpty(date)) {
+			return null;
+		}
+		try {
+			return Instant.from(DAV_DATE_TIME_FORMAT.parse(date));
+		} catch(Exception e) {
+			return null;
 		}
 	}
 
@@ -298,14 +404,29 @@ public class WebDavHttpServletService implements RequestHandler {
 			case ' ':
 				out.append("%20");
 				break;
+			case '!':
+				out.append("%21");
+				break;
+			case '"':
+				out.append("%22");
+				break;
+			case '#':
+				out.append("%23");
+				break;
+			case '%':
+				out.append("%25");
+				break;
+			case '&':
+				out.append("%26");
+				break;
+			case '+':
+				out.append("%2B");
+				break;
 			case '<':
 				out.append("%3C");
 				break;
 			case '>':
 				out.append("%3E");
-				break;
-			case '&':
-				out.append("%26");
 				break;
 			default:
 				out.append(chars.charAt(i));

@@ -1,11 +1,14 @@
 package org.jsc.web.ui;
 
+import java.io.ByteArrayInputStream;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Base64;
 
 import org.jsc.Util;
 import org.junit.Test;
+
+import com.google.common.base.Charsets;
 
 public class UtilTest {
 	@Test
@@ -43,5 +46,34 @@ public class UtilTest {
 		}
 		
 		System.out.println("1: " + (System.currentTimeMillis() - start));
+	}
+	
+	@Test
+	public void testInpuStreamRange() {
+		byte[] bytes = "_his was a fancy array".getBytes(Charsets.US_ASCII);
+		
+		byte[] r2_5 = Util.readFully(Util.inputStreamRange(new ByteArrayInputStream(bytes), 2, 5));
+		
+		assert(r2_5.length == 4);
+		assert(r2_5[0] == 'i');
+		assert(r2_5[3] == 'w');
+		
+		byte[] r0_7 = Util.readFully(Util.inputStreamRange(new ByteArrayInputStream(bytes), 0, 7));
+		
+		assert(r0_7.length == 8);
+		assert(r0_7[0] == '_');
+		assert(r0_7[7] == 'a');
+		
+		byte[] r0_last = Util.readFully(Util.inputStreamRange(new ByteArrayInputStream(bytes), 0, bytes.length-1));
+		
+		assert(r0_last.length == bytes.length);
+		assert(r0_last[0] == '_');
+		assert(r0_last[bytes.length-1] == bytes[bytes.length-1]);
+		
+		byte[] r0_all = Util.readFully(Util.inputStreamRange(new ByteArrayInputStream(bytes), 0, -1));
+		
+		assert(r0_all.length == bytes.length);
+		assert(r0_all[0] == '_');
+		assert(r0_all[bytes.length-1] == bytes[bytes.length-1]);
 	}
 }
