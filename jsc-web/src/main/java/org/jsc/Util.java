@@ -1287,10 +1287,11 @@ public class Util {
 	 * @param end final byte index (0-based), inclusive
 	 * @return a new InputStream, returning only a portion from the original
 	 */
-	public static InputStream inputStreamRange(InputStream in, final long start, final long end) {
-		if(start <= 0 && end < 0) {
+	public static InputStream inputStreamRange(InputStream in, final long start, final long endIndexInclusive) {
+		if(start <= 0 && endIndexInclusive < 0) {
 			return in;
 		}
+		final long last = endIndexInclusive < 0 ? Long.MAX_VALUE : (endIndexInclusive + 1); // FIXME limited here
 		return new InputStream() {
 			int read = 0;
 			@Override
@@ -1299,7 +1300,7 @@ public class Util {
 					in.read();
 					read++;
 				}
-				if(end < 0 || read < end) {
+				if(read < last) {
 					try {
 						int r = in.read();
 						read++;
@@ -1318,8 +1319,8 @@ public class Util {
 				while(read < start) {
 					read += in.read(b, 0, (int)(start - read > len ? len : (start - read) ));
 				}
-				if(end < 0 || read < end)  {
-					int r = in.read(b, 0, (int)( (end < 0 || end - read > len) ? len : (end - read) ));
+				if(read < last)  {
+					int r = in.read(b, 0, (int)( (last - read > len) ? len : (last - read) ));
 					read += r;
 					return r;
 				}

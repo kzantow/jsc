@@ -153,7 +153,7 @@ public class WebDavHttpServletService implements RequestHandler {
 				if(!c.isContainer()) {
 					res.setDateHeader("Last-Modified", c.getLastModified().toEpochMilli());
 					
-					boolean acceptRanges = false;
+					boolean acceptRanges = true;
 					
 					if(acceptRanges) {
 						res.setHeader("Accept-Ranges", "bytes"); // indicate we accept range requests
@@ -198,11 +198,14 @@ public class WebDavHttpServletService implements RequestHandler {
 											range = null; // no more ranges
 										}
 										
-										// add 1 to end, it's inclusive
-										size += endRange >= 0 ? (endRange - startRange) : (length - 1 - startRange);
+										if(endRange < 0) {
+											endRange = length - 1;
+										}
+										// add 1 to end, it's inclusive; subtract 1 from length for the last character
+										size += endRange + 1 - startRange;
 										
 										// multiple ranges need to be sent with a multipart response; don't support that yet
-										res.setHeader("Content-Range", "bytes " + startRange + "-" + (startRange + size) + "/" + length);
+										res.setHeader("Content-Range", "bytes " + startRange + "-" + endRange + "/" + length);
 										
 										if(rangeStreams == null) {
 											if(Util.debug) {
