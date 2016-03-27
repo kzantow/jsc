@@ -55,7 +55,7 @@ public class Util {
 	/**
 	 * Indicates to output debugging information
 	 */
-	public static final boolean debug = true;
+	public static final boolean debug = Boolean.getBoolean("org.jsc.debug");
 	
 	/**
 	 * Convenience to get an empty Class<?> array

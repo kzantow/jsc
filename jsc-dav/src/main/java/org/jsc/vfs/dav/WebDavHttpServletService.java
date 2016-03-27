@@ -137,8 +137,10 @@ public class WebDavHttpServletService implements RequestHandler {
 					return;
 				}
 				
-				//res.setHeader("Content-Disposition", "attachment; filename=\"" + c.getName().replace("\"", "&quot;") + "\"");
-				//res.setContentType(c.getContentType());
+				res.setHeader("Content-Disposition", "attachment; filename=\"" + Util.urlEncode(c.getName()) + "\"");
+				if(c.getContentType() != null) {
+					res.setContentType(c.getContentType());
+				}
 				if(!c.isContainer()) {
 					int length = (int)c.getContentLength();
 					if(length == 0) {
@@ -268,7 +270,7 @@ public class WebDavHttpServletService implements RequestHandler {
 			w.close();
 		}
 	}
-	
+
 	/**
 	 * Appends the path, separated by / -- does not begin with a slash
 	 * @param r
@@ -287,26 +289,26 @@ public class WebDavHttpServletService implements RequestHandler {
 	/**
 	 * Streams an XML-safe encoded stream
 	 */
-	public static void streamEncoded(CharSequence chars, Writer w) throws IOException {
+	public static void streamEncoded(CharSequence chars, Appendable out) throws IOException {
 		// URL encoding just doesn't work quite right for windows, for some reason...
 		int sz = chars.length();
 		for(int i = 0; i < sz; i++) {
 			char c = chars.charAt(i);
 			switch(c) {
 			case ' ':
-				w.append("%20");
+				out.append("%20");
 				break;
 			case '<':
-				w.append("%3C");
+				out.append("%3C");
 				break;
 			case '>':
-				w.append("%3E");
+				out.append("%3E");
 				break;
 			case '&':
-				w.append("%26");
+				out.append("%26");
 				break;
 			default:
-				w.append(chars.charAt(i));
+				out.append(chars.charAt(i));
 			}
 		}
 	}
