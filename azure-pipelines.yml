@@ -1,0 +1,21 @@
+# Surge synth build script
+# https://aka.ms/yaml
+
+trigger:
+- master
+
+strategy:
+  matrix:
+    mac:
+      imageName: 'macos-10.13'
+      TEMP: '/tmp'
+    windows:
+      imageName: 'vs2017-win2016'
+
+pool:
+  vmImage: $(imageName)
+
+steps:
+- bash: |
+    python --version
+    
